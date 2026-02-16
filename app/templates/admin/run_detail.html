@@ -1,11 +1,90 @@
 {% extends "admin/base.html" %}
-{% block title %}Run{% endblock %}
+{% block title %}Run {{ run.id }}{% endblock %}
 {% block content %}
-<section class="panel">
-  <h1>Run <code>{{ run.id }}</code></h1>
-  <p>Topic: <strong>{{ topic.slug }}</strong></p>
-  <p>Status: <strong>{{ run.status.value }}</strong></p>
-  <p class="muted">Detailed review UI will be added next.</p>
-  <a class="btn btn-secondary" href="/admin/topics">Back to topics</a>
+<section class="panel stack-md">
+  <div class="row between align-center wrap">
+    <h1>Run <code>{{ run.id }}</code></h1>
+    <a class="btn btn-secondary" href="/admin/topics">Back to Topics</a>
+  </div>
+
+  <div id="run-status-panel">
+    {% include "admin/partials/run_status.html" %}
+  </div>
+
+  <div class="meta-grid">
+    <section class="panel-soft">
+      <h3>claims_to_verify</h3>
+      {% if claims_to_verify %}
+      <ul class="list danger">
+        {% for item in claims_to_verify %}<li>{{ item }}</li>{% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">None</p>
+      {% endif %}
+    </section>
+
+    <section class="panel-soft">
+      <h3>questions_for_author</h3>
+      {% if questions_for_author %}
+      <ul class="list">{% for item in questions_for_author %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% else %}<p class="muted">None</p>{% endif %}
+    </section>
+
+    <section class="panel-soft">
+      <h3>diagram suggestions</h3>
+      {% if diagram_suggestions %}
+      <ul class="list">{% for item in diagram_suggestions %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% else %}<p class="muted">None</p>{% endif %}
+    </section>
+
+    <section class="panel-soft">
+      <h3>tables_to_include</h3>
+      {% if tables_to_include %}
+      <ul class="list">{% for item in tables_to_include %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% else %}<p class="muted">None</p>{% endif %}
+    </section>
+  </div>
+
+  <div class="artifact-grid">
+    <section class="panel-soft">
+      <h2>FR artifact</h2>
+      {% if fr_artifact %}
+      <p class="muted">Frontmatter: {{ fr_artifact.frontmatter|tojson }}</p>
+      <form hx-patch="/admin/artifacts/{{ fr_artifact.id }}" hx-target="#save-status-fr" hx-swap="outerHTML" class="stack-sm">
+        <textarea class="mono" name="body_mdx" rows="16">{{ fr_artifact.body_mdx }}</textarea>
+        <label class="checkbox"><input type="checkbox" name="reviewed" {% if fr_artifact.reviewed %}checked{% endif %}/> reviewed</label>
+        <label>review_notes
+          <textarea name="review_notes" rows="3">{{ fr_artifact.review_notes or '' }}</textarea>
+        </label>
+        <button class="btn" type="submit">Save FR</button>
+      </form>
+      <div id="save-status-fr"></div>
+      {% else %}
+      <p class="muted">FR artifact not generated yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel-soft">
+      <h2>EN artifact</h2>
+      {% if en_artifact %}
+      <p class="muted">Frontmatter: {{ en_artifact.frontmatter|tojson }}</p>
+      <form hx-patch="/admin/artifacts/{{ en_artifact.id }}" hx-target="#save-status-en" hx-swap="outerHTML" class="stack-sm">
+        <textarea class="mono" name="body_mdx" rows="16">{{ en_artifact.body_mdx }}</textarea>
+        <label class="checkbox"><input type="checkbox" name="reviewed" {% if en_artifact.reviewed %}checked{% endif %}/> reviewed</label>
+        <label>review_notes
+          <textarea name="review_notes" rows="3">{{ en_artifact.review_notes or '' }}</textarea>
+        </label>
+        <button class="btn" type="submit">Save EN</button>
+      </form>
+      <div id="save-status-en"></div>
+      {% else %}
+      <p class="muted">EN artifact not generated yet.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <div id="export-panel">
+    {% include "admin/partials/export_panel.html" %}
+  </div>
 </section>
 {% endblock %}

@@ -1,1 +1,7 @@
-<div class="artifact-save-status muted">Saved.</div>
+<div id="save-status-{{ artifact.lang.value }}" class="artifact-save-status muted">
+  Saved at {{ saved_at }}.
+  <span class="badge {{ 'status-succeeded' if artifact.reviewed else 'status-failed' }}">
+    reviewed={{ 'true' if artifact.reviewed else 'false' }}
+  </span>
+  <span class="muted">Diff not implemented.</span>
+</div>

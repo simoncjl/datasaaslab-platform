@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, Request, Response, status
@@ -6,11 +7,12 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.admin.auth import require_admin_access
+from app.admin.utils import compute_export_gate
 from app.dependencies import get_db
-from app.models import Run, RunStatus, Topic
+from app.models import Artifact, ArtifactLang, Run, RunStatus, Topic
 from app.tasks import generate_run
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_access)])
@@ -100,6 +102,26 @@ def _topic_form_context(topic: Topic | None = None) -> dict:
         "context_bullets": _bullets_to_text(topic.context),
         "constraints_bullets": _bullets_to_text(topic.constraints_json),
         "author_inputs": json.dumps(topic.author_inputs or {}, indent=2),
+    }
+
+
+def _run_context(run: Run) -> dict:
+    artifacts_by_lang = {artifact.lang: artifact for artifact in run.artifacts}
+    fr_artifact = artifacts_by_lang.get(ArtifactLang.FR)
+    en_artifact = artifacts_by_lang.get(ArtifactLang.EN)
+    export_gate = compute_export_gate(run, fr_artifact, en_artifact)
+
+    meta = run.meta if isinstance(run.meta, dict) else {}
+    return {
+        "run": run,
+        "topic": run.topic,
+        "fr_artifact": fr_artifact,
+        "en_artifact": en_artifact,
+        "export_gate": export_gate,
+        "claims_to_verify": meta.get("claims_to_verify", []),
+        "questions_for_author": meta.get("questions_for_author", []),
+        "diagram_suggestions": meta.get("diagram_suggestions", []),
+        "tables_to_include": meta.get("tables_to_include", []),
     }
 
 
@@ -325,11 +347,51 @@ def admin_generate_topic(id: UUID, request: Request, db: Session = Depends(get_d
 
 
 @router.get("/runs/{run_id}")
-def admin_run_placeholder(run_id: UUID, request: Request, db: Session = Depends(get_db)):
-    run = db.get(Run, run_id)
+def admin_run_detail(run_id: UUID, request: Request, db: Session = Depends(get_db)):
+    run = db.scalar(select(Run).options(selectinload(Run.topic), selectinload(Run.artifacts)).where(Run.id == run_id))
     if run is None:
         return RedirectResponse(url="/admin/topics", status_code=302)
-    return templates.TemplateResponse("admin/run_detail.html", {"request": request, "run": run, "topic": run.topic})
+    context = {"request": request, **_run_context(run)}
+    return templates.TemplateResponse("admin/run_detail.html", context)
+
+
+@router.patch("/artifacts/{artifact_id}")
+def admin_patch_artifact(
+    artifact_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    body_mdx: str = Form(""),
+    reviewed: str | None = Form(None),
+    review_notes: str = Form(""),
+):
+    artifact = db.get(Artifact, artifact_id)
+    if artifact is None:
+        response = Response(status_code=404)
+        response.body = b"Artifact not found"
+        return response
+
+    artifact.body_mdx = body_mdx
+    artifact.reviewed = reviewed is not None
+    artifact.review_notes = review_notes.strip() or None
+    db.commit()
+
+    run = db.scalar(select(Run).options(selectinload(Run.topic), selectinload(Run.artifacts)).where(Run.id == artifact.run_id))
+    export_gate = compute_export_gate(
+        run,
+        next((a for a in run.artifacts if a.lang == ArtifactLang.FR), None),
+        next((a for a in run.artifacts if a.lang == ArtifactLang.EN), None),
+    )
+
+    return templates.TemplateResponse(
+        "admin/partials/artifact_save_status.html",
+        {
+            "request": request,
+            "artifact": artifact,
+            "saved_at": datetime.now(timezone.utc),
+            "export_gate": export_gate,
+            "run": run,
+        },
+    )
 
 
 @router.get("/batches")

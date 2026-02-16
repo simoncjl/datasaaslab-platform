@@ -1,3 +1,20 @@
-<div id="export-panel" class="panel">
-  <strong>Export panel</strong>
-</div>
+<section id="export-panel" class="panel-soft stack-sm">
+  <h2>Export Gates</h2>
+  <ul class="list checks">
+    <li class="{{ 'ok' if export_gate.checks.run_succeeded else 'bad' }}">run.status == succeeded</li>
+    <li class="{{ 'ok' if export_gate.checks.artifact_fr_exists else 'bad' }}">FR artifact exists</li>
+    <li class="{{ 'ok' if export_gate.checks.artifact_en_exists else 'bad' }}">EN artifact exists</li>
+    <li class="{{ 'ok' if export_gate.checks.artifact_fr_reviewed else 'bad' }}">FR reviewed == true</li>
+    <li class="{{ 'ok' if export_gate.checks.artifact_en_reviewed else 'bad' }}">EN reviewed == true</li>
+    <li class="{{ 'ok' if export_gate.checks.claims_to_verify_empty else 'bad' }}">claims_to_verify empty/missing</li>
+  </ul>
+
+  {% if export_gate.reasons %}
+  <div class="flash error">
+    <strong>Export blocked</strong>
+    <ul class="list">{% for reason in export_gate.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <button class="btn" type="button" {% if not export_gate.ready %}disabled{% endif %}>Export FR + EN</button>
+</section>

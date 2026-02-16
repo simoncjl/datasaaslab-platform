@@ -1,3 +1,16 @@
-<div id="run-status-panel" class="panel">
-  <strong>Status panel</strong>
+<div id="run-status-panel" class="panel-soft">
+  <div class="row between wrap">
+    <div>
+      <strong>Topic:</strong> {{ topic.slug }}
+    </div>
+    <div>
+      <span class="badge status-{{ run.status.value }}">{{ run.status.value }}</span>
+    </div>
+  </div>
+  <div class="row gap-lg wrap muted">
+    <div><strong>Model:</strong> {{ run.model or '-' }}</div>
+    <div><strong>Started:</strong> {{ run.started_at or '-' }}</div>
+    <div><strong>Finished:</strong> {{ run.finished_at or '-' }}</div>
+    <div><strong>Updated:</strong> {{ run.updated_at }}</div>
+  </div>
 </div>
