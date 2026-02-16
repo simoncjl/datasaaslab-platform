@@ -1,60 +1,137 @@
+![AI-assisted](https://img.shields.io/badge/AI-assisted%20drafts-human%20reviewed-blue)
+
 # datasaaslab-platform
 
-Production-ready backend with FastAPI, PostgreSQL 16, Redis, SQLAlchemy 2.0, Alembic, Celery, and a local HTMX/Jinja2 admin UI.
+Production-ready backend for an **AI-assisted technical writing pipeline**.
 
-## Quick Start
+Stack: FastAPI · PostgreSQL 16 · Redis · SQLAlchemy 2.0 · Alembic · Celery · HTMX/Jinja2 admin UI · OpenAI Responses API (Structured Outputs)
 
-1. Copy env template:
-   ```bash
-   cp .env.example .env
-   ```
-2. Start stack:
-   ```bash
-   make up
-   ```
-3. Apply DB migrations:
-   ```bash
-   make migrate
-   ```
+This platform generates **bilingual technical article drafts (FR/EN)** with a strict **human review workflow** and **export gates**.
 
-API docs: http://localhost:8000/docs
+---
 
-## Admin UI
+## ✨ Features
 
-Open: http://localhost:8000/admin
+- Bilingual article generation (FR/EN)
+- Section-by-section AI review assistant
+- Claims-to-verify workflow
+- Human review gates before export
+- Single export action writing both MDX files
+- Async generation via Celery + Redis
+- Batch generation support (OpenAI Batch API)
+- Audit trail of AI suggestions
 
-Auth behavior:
+---
 
-- If `ADMIN_USER` and `ADMIN_PASS` are set, `/admin` requires HTTP Basic auth.
-- If they are not set, `/admin` allows localhost-only access (`127.0.0.1` / `::1`).
+## 🔒 Review Gates
+
+Export is blocked unless:
+
+- `run.status == succeeded`
+- FR and EN artifacts exist
+- both artifacts are reviewed
+- `run.meta.claims_to_verify` is empty
+
+This enforces **human validation before publication**.
+
+---
+
+## 🚀 Quick Start
+
+Primary workflow (`make`):
+
+```bash
+cp .env.example .env
+make up
+make migrate
+```
+
+API docs: `http://localhost:8000/docs`  
+Admin UI: `http://localhost:8000/admin`
+
+Alternative manual workflow (`docker compose`):
+
+```bash
+docker compose up --build
+docker compose exec api alembic upgrade head
+```
+
+---
+
+## 🔐 Admin Authentication
+
+- If `ADMIN_USER` and `ADMIN_PASS` are set, HTTP Basic auth is required for `/admin`.
+- If not set, `/admin` is restricted to localhost (`127.0.0.1` / `::1`).
 
 Example:
 
 ```bash
 export ADMIN_USER=admin
 export ADMIN_PASS=change-me
+make down && make up
 ```
 
-Then restart the stack (`make down && make up`).
+---
 
-## Admin Workflow
+## 🧪 Admin Workflow
 
 1. Create or edit a topic in `/admin/topics`.
 2. Click `Generate` to create a run and enqueue async generation.
-3. Open the run page, review FR/EN artifacts, edit MDX bodies, mark both reviewed.
-4. Ensure export gates pass:
-   - run status is `succeeded`
-   - FR and EN artifacts exist
-   - FR and EN are reviewed
-   - `run.meta.claims_to_verify` is empty or missing
-5. Click `Export FR + EN` to write files to:
-   - `BLOG_REPO_PATH/src/content/blog/fr/{slug}.mdx`
-   - `BLOG_REPO_PATH/src/content/blog/en/{slug}.mdx`
+3. Open the run page:
+   - review FR/EN artifacts
+   - edit MDX
+   - mark both as reviewed
+4. Ensure export gates pass.
+5. Click `Export FR + EN`.
 
-## Batch Generation (Admin)
+Files are written to:
+
+- `BLOG_REPO_PATH/src/content/blog/fr/{slug}.mdx`
+- `BLOG_REPO_PATH/src/content/blog/en/{slug}.mdx`
+
+---
+
+## 📦 Batch Generation
 
 - Create batch: `/admin/batches`
 - View batch: `/admin/batches/{id}`
-- Trigger manual poll: `Poll now` button
+- Trigger manual poll: `Poll now`
 
-Make sure `OPENAI_API_KEY` and `BLOG_REPO_PATH` are configured in `.env`.
+Requires:
+
+```bash
+OPENAI_API_KEY=...
+BLOG_REPO_PATH=../datasaaslab-blog
+```
+
+---
+
+## ⚙️ Environment Variables
+
+```bash
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-5
+BLOG_REPO_PATH=../datasaaslab-blog
+ADMIN_USER=admin
+ADMIN_PASS=change-me
+```
+
+---
+
+## 🤖 AI Usage Policy
+
+AI generates drafts and suggestions only.
+
+All content is:
+
+- reviewed by a human
+- technically validated
+- edited before export
+
+No client data or confidential information is stored in this repository.
+
+---
+
+## 📄 License
+
+MIT
