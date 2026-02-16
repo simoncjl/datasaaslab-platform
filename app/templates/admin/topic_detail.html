@@ -1,8 +1,53 @@
 {% extends "admin/base.html" %}
-{% block title %}Topic{% endblock %}
+{% block title %}{% if topic %}Edit Topic{% else %}New Topic{% endif %}{% endblock %}
 {% block content %}
 <section class="panel">
-  <h1>Topic</h1>
-  <p>Topic editor will be available here.</p>
+  <h1>{% if topic %}Edit Topic{% else %}New Topic{% endif %}</h1>
+  {% if message %}
+    {% include "admin/partials/flash.html" %}
+  {% endif %}
+
+  <form method="post" action="{% if topic %}/admin/topics/{{ topic.id }}{% else %}/admin/topics{% endif %}" class="form-grid">
+    <label>Slug
+      <input type="text" name="slug" value="{{ form.slug }}" required />
+    </label>
+
+    <label>Tags (comma separated)
+      <input type="text" name="tags" value="{{ form.tags }}" />
+    </label>
+
+    <label>FR title
+      <input type="text" name="fr_title" value="{{ form.fr_title }}" />
+    </label>
+
+    <label>FR description
+      <textarea name="fr_description" rows="3">{{ form.fr_description }}</textarea>
+    </label>
+
+    <label>EN title
+      <input type="text" name="en_title" value="{{ form.en_title }}" />
+    </label>
+
+    <label>EN description
+      <textarea name="en_description" rows="3">{{ form.en_description }}</textarea>
+    </label>
+
+    <label>Context bullets (one per line)
+      <textarea name="context_bullets" rows="5">{{ form.context_bullets }}</textarea>
+    </label>
+
+    <label>Constraints (one per line)
+      <textarea name="constraints_bullets" rows="5">{{ form.constraints_bullets }}</textarea>
+    </label>
+
+    <label>author_inputs JSON
+      <textarea name="author_inputs" rows="8" class="mono">{{ form.author_inputs }}</textarea>
+    </label>
+
+    <div class="row gap-sm">
+      <button type="submit" class="btn">Save</button>
+      <a class="btn btn-secondary" href="/admin/topics">Back</a>
+    </div>
+  </form>
 </section>
 {% endblock %}

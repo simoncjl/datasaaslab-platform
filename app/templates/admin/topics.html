@@ -2,11 +2,51 @@
 {% block title %}Topics{% endblock %}
 {% block content %}
 <section class="panel">
-  <h1>Topics</h1>
+  <div class="row between align-center">
+    <h1>Topics</h1>
+    <a class="btn" href="/admin/topics/new">New topic</a>
+  </div>
+
   {% if message %}
-  <p>{{ message }}</p>
-  {% else %}
-  <p>Admin UI scaffold is ready.</p>
+    {% include "admin/partials/flash.html" %}
   {% endif %}
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Slug</th>
+        <th>Tags</th>
+        <th>FR title</th>
+        <th>EN title</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for topic in topics %}
+      <tr>
+        <td><code>{{ topic.id }}</code></td>
+        <td>{{ topic.slug }}</td>
+        <td>
+          {% if topic.tags and topic.tags.get('items') %}
+            {{ topic.tags.get('items') | join(', ') }}
+          {% endif %}
+        </td>
+        <td>{{ topic.fr_content.get('title', '') if topic.fr_content else '' }}</td>
+        <td>{{ topic.en_content.get('title', '') if topic.en_content else '' }}</td>
+        <td class="row gap-sm">
+          <a class="btn btn-secondary" href="/admin/topics/{{ topic.id }}">Edit</a>
+          <button
+            class="btn"
+            hx-post="/admin/topics/{{ topic.id }}/generate"
+            hx-swap="none"
+          >Generate</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">No topics yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </section>
 {% endblock %}

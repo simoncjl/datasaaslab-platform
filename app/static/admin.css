@@ -42,6 +42,52 @@ body {
   border-radius: 8px;
   padding: 1rem;
 }
+.row { display: flex; }
+.between { justify-content: space-between; }
+.align-center { align-items: center; }
+.gap-sm { gap: 0.5rem; }
+.btn {
+  display: inline-block;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn-secondary {
+  background: #fff;
+  color: var(--text);
+  border-color: var(--border);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+.table th,
+.table td {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  padding: 0.6rem;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+}
+.form-grid input,
+.form-grid textarea {
+  width: 100%;
+  margin-top: 0.2rem;
+  padding: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+}
+.mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
 .muted { color: var(--muted); }
 .flash {
   padding: 0.7rem 0.9rem;

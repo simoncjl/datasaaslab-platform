@@ -2,7 +2,10 @@
 {% block title %}Run{% endblock %}
 {% block content %}
 <section class="panel">
-  <h1>Run</h1>
-  <p>Run review page will be available here.</p>
+  <h1>Run <code>{{ run.id }}</code></h1>
+  <p>Topic: <strong>{{ topic.slug }}</strong></p>
+  <p>Status: <strong>{{ run.status.value }}</strong></p>
+  <p class="muted">Detailed review UI will be added next.</p>
+  <a class="btn btn-secondary" href="/admin/topics">Back to topics</a>
 </section>
 {% endblock %}
