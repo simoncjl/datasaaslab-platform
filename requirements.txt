@@ -7,3 +7,4 @@ pydantic-settings==2.10.1
 redis==6.4.0
 celery==5.5.3
 openai==1.99.5
+PyYAML==6.0.2
