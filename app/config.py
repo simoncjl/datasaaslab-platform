@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
     blog_repo_path: str = ""
+    admin_user: str = ""
+    admin_pass: str = ""
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"

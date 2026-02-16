@@ -1,0 +1,12 @@
+{% extends "admin/base.html" %}
+{% block title %}Topics{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>Topics</h1>
+  {% if message %}
+  <p>{{ message }}</p>
+  {% else %}
+  <p>Admin UI scaffold is ready.</p>
+  {% endif %}
+</section>
+{% endblock %}
