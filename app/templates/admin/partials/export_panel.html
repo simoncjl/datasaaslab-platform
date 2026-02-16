@@ -1,4 +1,4 @@
-<section id="export-panel" class="panel-soft stack-sm">
+<section id="export-panel" class="panel-soft stack-sm" {% if oob %}hx-swap-oob="outerHTML"{% endif %}>
   <h2>Export Gates</h2>
   <ul class="list checks">
     <li class="{{ 'ok' if export_gate.checks.run_succeeded else 'bad' }}">run.status == succeeded</li>
@@ -16,5 +16,19 @@
   </div>
   {% endif %}
 
-  <button class="btn" type="button" {% if not export_gate.ready %}disabled{% endif %}>Export FR + EN</button>
+  {% if export_message %}
+  <div class="flash info">
+    <strong>{{ export_message }}</strong>
+    {% if export_files %}
+    <ul class="list">
+      <li>FR: <code>{{ export_files.fr }}</code></li>
+      <li>EN: <code>{{ export_files.en }}</code></li>
+    </ul>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <form hx-post="/admin/runs/{{ run.id }}/export" hx-target="#export-panel" hx-swap="outerHTML">
+    <button class="btn" type="submit" {% if not export_gate.ready %}disabled{% endif %}>Export FR + EN</button>
+  </form>
 </section>

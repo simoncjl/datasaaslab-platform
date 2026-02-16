@@ -1,7 +1,10 @@
 import json
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 from uuid import UUID
 
+import yaml
 from fastapi import APIRouter, Depends, Form, Request, Response, status
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -11,6 +14,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.admin.auth import require_admin_access
 from app.admin.utils import compute_export_gate
+from app.config import settings
 from app.dependencies import get_db
 from app.models import Artifact, ArtifactLang, Run, RunStatus, Topic
 from app.tasks import generate_run
@@ -105,7 +109,7 @@ def _topic_form_context(topic: Topic | None = None) -> dict:
     }
 
 
-def _run_context(run: Run) -> dict:
+def _run_context(run: Run, export_message: str | None = None, export_files: dict[str, str] | None = None) -> dict:
     artifacts_by_lang = {artifact.lang: artifact for artifact in run.artifacts}
     fr_artifact = artifacts_by_lang.get(ArtifactLang.FR)
     en_artifact = artifacts_by_lang.get(ArtifactLang.EN)
@@ -122,7 +126,14 @@ def _run_context(run: Run) -> dict:
         "questions_for_author": meta.get("questions_for_author", []),
         "diagram_suggestions": meta.get("diagram_suggestions", []),
         "tables_to_include": meta.get("tables_to_include", []),
+        "export_message": export_message,
+        "export_files": export_files or {},
     }
+
+
+def _render_mdx(frontmatter: dict[str, Any], body_mdx: str) -> str:
+    fm_text = yaml.safe_dump(frontmatter or {}, sort_keys=False, allow_unicode=True).strip()
+    return f"---\n{fm_text}\n---\n\n{(body_mdx or '').rstrip()}\n"
 
 
 @router.get("")
@@ -355,6 +366,14 @@ def admin_run_detail(run_id: UUID, request: Request, db: Session = Depends(get_d
     return templates.TemplateResponse("admin/run_detail.html", context)
 
 
+@router.get("/runs/{run_id}/status")
+def admin_run_status(run_id: UUID, request: Request, db: Session = Depends(get_db)):
+    run = db.scalar(select(Run).options(selectinload(Run.topic)).where(Run.id == run_id))
+    if run is None:
+        return Response("Run not found", status_code=404)
+    return templates.TemplateResponse("admin/partials/run_status.html", {"request": request, "run": run, "topic": run.topic})
+
+
 @router.patch("/artifacts/{artifact_id}")
 def admin_patch_artifact(
     artifact_id: UUID,
@@ -376,11 +395,7 @@ def admin_patch_artifact(
     db.commit()
 
     run = db.scalar(select(Run).options(selectinload(Run.topic), selectinload(Run.artifacts)).where(Run.id == artifact.run_id))
-    export_gate = compute_export_gate(
-        run,
-        next((a for a in run.artifacts if a.lang == ArtifactLang.FR), None),
-        next((a for a in run.artifacts if a.lang == ArtifactLang.EN), None),
-    )
+    context = _run_context(run)
 
     return templates.TemplateResponse(
         "admin/partials/artifact_save_status.html",
@@ -388,10 +403,52 @@ def admin_patch_artifact(
             "request": request,
             "artifact": artifact,
             "saved_at": datetime.now(timezone.utc),
-            "export_gate": export_gate,
-            "run": run,
+            **context,
         },
     )
+
+
+@router.post("/runs/{run_id}/export")
+def admin_export_run(run_id: UUID, request: Request, db: Session = Depends(get_db)):
+    run = db.scalar(select(Run).options(selectinload(Run.topic), selectinload(Run.artifacts)).where(Run.id == run_id))
+    if run is None:
+        return Response("Run not found", status_code=404)
+
+    context = _run_context(run)
+    if not context["export_gate"]["ready"]:
+        return templates.TemplateResponse(
+            "admin/partials/export_panel.html",
+            {"request": request, **context},
+            status_code=409,
+        )
+
+    if not settings.blog_repo_path:
+        context["export_gate"]["ready"] = False
+        context["export_gate"]["reasons"].append("BLOG_REPO_PATH is not configured")
+        return templates.TemplateResponse(
+            "admin/partials/export_panel.html",
+            {"request": request, **context},
+            status_code=500,
+        )
+
+    repo_root = Path(settings.blog_repo_path)
+    fr_path = repo_root / "src" / "content" / "blog" / "fr" / f"{run.topic.slug}.mdx"
+    en_path = repo_root / "src" / "content" / "blog" / "en" / f"{run.topic.slug}.mdx"
+
+    fr_path.parent.mkdir(parents=True, exist_ok=True)
+    en_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fr_artifact = context["fr_artifact"]
+    en_artifact = context["en_artifact"]
+    fr_path.write_text(_render_mdx(fr_artifact.frontmatter, fr_artifact.body_mdx), encoding="utf-8")
+    en_path.write_text(_render_mdx(en_artifact.frontmatter, en_artifact.body_mdx), encoding="utf-8")
+
+    context = _run_context(
+        run,
+        export_message="Export completed. Both FR+EN files were written.",
+        export_files={"fr": str(fr_path), "en": str(en_path)},
+    )
+    return templates.TemplateResponse("admin/partials/export_panel.html", {"request": request, **context})
 
 
 @router.get("/batches")
