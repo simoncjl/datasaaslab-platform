@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import ArtifactLang, RunStatus
+from app.models import ArtifactLang, BatchStatus, RunStatus
 
 
 class TopicCreate(BaseModel):
@@ -96,3 +96,41 @@ class ExportResponse(BaseModel):
 class ExportConflictResponse(BaseModel):
     detail: str
     reasons: list[str]
+
+
+class BatchCreate(BaseModel):
+    topic_ids: list[UUID]
+    model: str | None = None
+
+
+class BatchItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    batch_id: UUID
+    run_id: UUID
+    topic_id: UUID
+    custom_id: str
+    status: BatchStatus
+    response_code: int | None
+    error: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class BatchOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    model: str | None
+    status: BatchStatus
+    openai_batch_id: str | None
+    error: str | None
+    created_at: datetime
+    updated_at: datetime
+    items: list[BatchItemOut] = Field(default_factory=list)
+
+
+class BatchPollResponse(BaseModel):
+    batch: BatchOut
+    task_id: str

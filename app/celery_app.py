@@ -6,7 +6,7 @@ celery_app = Celery(
     "datasaaslab-platform",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks"],
+    include=["app.tasks", "app.batch_tasks"],
 )
 
 celery_app.conf.update(
