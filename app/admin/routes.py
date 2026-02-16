@@ -14,9 +14,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.admin.auth import require_admin_access
 from app.admin.utils import compute_export_gate
+from app.batch_pipeline import create_openai_batch, poll_openai_batch
 from app.config import settings
 from app.dependencies import get_db
-from app.models import Artifact, ArtifactLang, Run, RunStatus, Topic
+from app.models import Artifact, ArtifactLang, Batch, BatchItem, Run, RunStatus, Topic
 from app.tasks import generate_run
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_access)])
@@ -452,8 +453,75 @@ def admin_export_run(run_id: UUID, request: Request, db: Session = Depends(get_d
 
 
 @router.get("/batches")
-def admin_batches(request: Request):
+def admin_batches(request: Request, db: Session = Depends(get_db)):
+    topics = list(db.scalars(select(Topic).order_by(Topic.slug.asc())))
+    batches = list(db.scalars(select(Batch).order_by(Batch.created_at.desc()).limit(30)))
     return templates.TemplateResponse(
-        "admin/topics.html",
-        {"request": request, "topics": [], "message": "Batch admin page will be available in a later step."},
+        "admin/batches.html",
+        {"request": request, "topics": topics, "batches": batches, "message": None, "level": "info"},
     )
+
+
+@router.post("/batches")
+def admin_create_batch(request: Request, db: Session = Depends(get_db), topic_ids: list[str] = Form(default=[]), model: str = Form("")):
+    if not topic_ids:
+        topics = list(db.scalars(select(Topic).order_by(Topic.slug.asc())))
+        batches = list(db.scalars(select(Batch).order_by(Batch.created_at.desc()).limit(30)))
+        return templates.TemplateResponse(
+            "admin/batches.html",
+            {
+                "request": request,
+                "topics": topics,
+                "batches": batches,
+                "message": "Select at least one topic to create a batch.",
+                "level": "error",
+            },
+            status_code=400,
+        )
+
+    try:
+        batch = create_openai_batch(db, [UUID(topic_id) for topic_id in topic_ids], model.strip() or None)
+    except Exception as exc:
+        topics = list(db.scalars(select(Topic).order_by(Topic.slug.asc())))
+        batches = list(db.scalars(select(Batch).order_by(Batch.created_at.desc()).limit(30)))
+        return templates.TemplateResponse(
+            "admin/batches.html",
+            {
+                "request": request,
+                "topics": topics,
+                "batches": batches,
+                "message": f"Batch creation failed: {exc}",
+                "level": "error",
+            },
+            status_code=502,
+        )
+
+    return RedirectResponse(url=f"/admin/batches/{batch.id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/batches/{batch_id}")
+def admin_batch_detail(batch_id: UUID, request: Request, db: Session = Depends(get_db)):
+    batch = db.scalar(
+        select(Batch)
+        .options(selectinload(Batch.items).selectinload(BatchItem.run), selectinload(Batch.items).selectinload(BatchItem.topic))
+        .where(Batch.id == batch_id)
+    )
+    if batch is None:
+        return RedirectResponse(url="/admin/batches", status_code=302)
+
+    return templates.TemplateResponse("admin/batch_detail.html", {"request": request, "batch": batch})
+
+
+@router.post("/batches/{batch_id}/poll")
+def admin_batch_poll(batch_id: UUID, request: Request, db: Session = Depends(get_db)):
+    try:
+        poll_openai_batch(db, batch_id)
+    except Exception as exc:
+        return Response(f"Batch poll failed: {exc}", status_code=502)
+
+    batch = db.scalar(
+        select(Batch)
+        .options(selectinload(Batch.items).selectinload(BatchItem.run), selectinload(Batch.items).selectinload(BatchItem.topic))
+        .where(Batch.id == batch_id)
+    )
+    return templates.TemplateResponse("admin/partials/batch_detail_panel.html", {"request": request, "batch": batch})

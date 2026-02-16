@@ -1,0 +1,38 @@
+<section id="batch-detail-panel" class="panel stack-md">
+  <div class="row between align-center wrap">
+    <h1>Batch <code>{{ batch.id }}</code></h1>
+    <div class="row gap-sm">
+      <button class="btn" hx-post="/admin/batches/{{ batch.id }}/poll" hx-target="#batch-detail-panel" hx-swap="outerHTML">Poll now</button>
+      <a class="btn btn-secondary" href="/admin/batches">Back</a>
+    </div>
+  </div>
+
+  <div class="panel-soft row gap-lg wrap">
+    <div><strong>Status:</strong> <span class="badge status-{{ batch.status.value }}">{{ batch.status.value }}</span></div>
+    <div><strong>Model:</strong> {{ batch.model or '-' }}</div>
+    <div><strong>OpenAI Batch:</strong> <code>{{ batch.openai_batch_id or '-' }}</code></div>
+  </div>
+
+  {% if batch.error %}
+  <div class="flash error">{{ batch.error }}</div>
+  {% endif %}
+
+  <table class="table">
+    <thead>
+      <tr><th>Run</th><th>Topic</th><th>Item Status</th><th>Response</th><th>Error</th></tr>
+    </thead>
+    <tbody>
+      {% for item in batch.items %}
+      <tr>
+        <td><a href="/admin/runs/{{ item.run_id }}"><code>{{ item.run_id }}</code></a></td>
+        <td>{{ item.topic.slug if item.topic else item.topic_id }}</td>
+        <td><span class="badge status-{{ item.status.value }}">{{ item.status.value }}</span></td>
+        <td>{{ item.response_code or '-' }}</td>
+        <td class="muted">{{ item.error or '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">No items.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

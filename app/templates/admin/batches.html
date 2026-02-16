@@ -1,0 +1,50 @@
+{% extends "admin/base.html" %}
+{% block title %}Batches{% endblock %}
+{% block content %}
+<section class="panel stack-md">
+  <h1>Batches</h1>
+
+  {% if message %}
+    {% include "admin/partials/flash.html" %}
+  {% endif %}
+
+  <section class="panel-soft">
+    <h2>Create OpenAI Batch</h2>
+    <form method="post" action="/admin/batches" class="stack-sm">
+      <label>Model (optional)
+        <input type="text" name="model" placeholder="gpt-4.1-mini" />
+      </label>
+      <div class="checkbox-grid">
+        {% for topic in topics %}
+        <label class="checkbox"><input type="checkbox" name="topic_ids" value="{{ topic.id }}" /> {{ topic.slug }}</label>
+        {% else %}
+        <p class="muted">No topics available.</p>
+        {% endfor %}
+      </div>
+      <button class="btn" type="submit">Create Batch</button>
+    </form>
+  </section>
+
+  <section class="panel-soft">
+    <h2>Recent Batches</h2>
+    <table class="table">
+      <thead>
+        <tr><th>ID</th><th>Status</th><th>Model</th><th>OpenAI Batch</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        {% for batch in batches %}
+        <tr>
+          <td><a href="/admin/batches/{{ batch.id }}"><code>{{ batch.id }}</code></a></td>
+          <td><span class="badge status-{{ batch.status.value }}">{{ batch.status.value }}</span></td>
+          <td>{{ batch.model or '-' }}</td>
+          <td><code>{{ batch.openai_batch_id or '-' }}</code></td>
+          <td>{{ batch.created_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="muted">No batches yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</section>
+{% endblock %}
