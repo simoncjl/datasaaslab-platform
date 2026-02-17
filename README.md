@@ -1,4 +1,4 @@
-![AI-assisted](https://img.shields.io/badge/AI-assisted%20drafts-human%20reviewed-blue)
+![AI-assisted](https://img.shields.io/badge/AI--assisted-human%20reviewed-blue)
 
 # datasaaslab-platform
 
